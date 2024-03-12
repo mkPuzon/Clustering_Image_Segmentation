@@ -166,6 +166,22 @@ class KMeans:
             raise RuntimeError('Cannot compute kmeans with #data samples < k!')
         if k < 1:
             raise RuntimeError('Cannot compute kmeans with k < 1!')
+        
+        self.k = k
+        self.centroids = self.initialize(k)
+        self.data_centroid_labels = self.update_labels(self.centroids)
+        self.centroids, centroid_diff = self.update_centroids(k, self.data_centroid_labels, self.centroids)
+        self.inertia = self.compute_inertia()
+        
+        i = 0
+        while i <= max_iter and centroid_diff.all() > tol:
+            # do kmeans
+            self.data_centroid_labels = self.update_labels(self.centroids)
+            self.centroids, centroid_diff = self.update_centroids(k, self.data_centroid_labels, self.centroids)
+            self.inertia = self.compute_inertia()
+            i += 1
+            
+        return self.inertia
 
     def cluster_batch(self, k=2, n_iter=1, verbose=False, p=2):
         '''Run K-means multiple times, each time with different initial conditions.
@@ -246,14 +262,20 @@ class KMeans:
             
         return current_centroids, centroid_diff
 
-    def compute_inertia(self):
+    def compute_inertia(self):  # bugged
         '''Mean squared distance between every data sample and its assigned (nearest) centroid
 
         Returns:
         -----------
         float. The average squared distance between every data sample and its assigned cluster centroid.
-        '''
-        pass
+        ''' 
+        sums = 0
+        for i in range(len(self.data)): # for each sample
+            # calculate distance between point and assigned centroid
+            sums += self.dist_pt_to_pt(self.data[i,:],self.centroids[self.data_centroid_labels[i]])
+            
+        inertia = 1/len(self.data) * (sums)
+        return inertia
 
     def plot_clusters(self):
         '''Creates a scatter plot of the data color-coded by cluster assignment.
@@ -268,7 +290,21 @@ class KMeans:
         that can be passed into the color `c` keyword argument of plt.plot or plt.scatter.
             Pick one of the palettes with a generous number of colors so that you don't run out if k is large (e.g. >6).
         '''
-        pass
+        # 10 colors
+        colors = ["#3f90da", "#ffa90e", "#bd1f01", "#94a4a2", "#832db6", "#a96b59", "#e76300", "#b9ac70", "#717581", "#92dadd"]
+
+        for i in range(self.k):
+            filtered = (self.data[self.get_data_centroid_labels() == i])
+            plt.scatter(filtered[:,0], filtered[:,1],edgecolor='black', color=colors[i])
+         
+        # plot centroids   
+        for i in range(len(self.centroids)):
+            plt.plot(self.centroids[i][0], self.centroids[i][1], '*', markersize=15, color='black')
+
+        plt.title("K-means Clusters")
+        plt.xlabel("")
+        plt.ylabel("")
+        plt.show()
 
     def elbow_plot(self, max_k):
         '''Makes an elbow plot: cluster number (k) on x axis, inertia on y axis.
