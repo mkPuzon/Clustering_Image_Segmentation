@@ -230,7 +230,21 @@ class KMeans:
         In the case of each cluster without samples assigned to it, you should assign make its centroid a data sample
         randomly selected from the dataset.
         '''
-        pass
+        current_centroids = np.zeros((k,2))
+        for i in range(k):
+            # get all points assigned to centroid i
+            pts = self.data[data_centroid_labels == i]
+            if len(pts) == 0:   # if cluster is empty
+                # current_centroids[i,:]
+                pts = self.data[np.random.choice(self.data.shape[0], size=1), :]
+            # calculate new position of centroid i
+            new_centroid = 1/len(pts) * (np.sum(pts, axis=0))
+            # add updated position to new centroid array
+            current_centroids[i,:] = new_centroid
+                
+        centroid_diff = np.array(current_centroids) - prev_centroids
+            
+        return current_centroids, centroid_diff
 
     def compute_inertia(self):
         '''Mean squared distance between every data sample and its assigned (nearest) centroid
