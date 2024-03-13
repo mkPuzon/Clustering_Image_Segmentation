@@ -136,7 +136,10 @@ class KMeans:
         NOTE: Can be implemented without any for loops
         '''
         self.k = k
-        return self.data[np.random.choice(self.data.shape[0], size=3, replace=False), :]
+        inital_centrioids = self.data[np.random.choice(self.data.shape[0], size=k, replace=False), :]
+        self.centroids = inital_centrioids
+        self.update_labels(self.centroids)
+        return inital_centrioids
 
     def cluster(self, k=2, tol=1e-2, max_iter=1000, verbose=False, p=2):
         '''Performs K-means clustering on the data
@@ -176,14 +179,14 @@ class KMeans:
         i = 0
         while i <= max_iter and centroid_diff.all() > tol:
             # do kmeans
-            self.data_centroid_labels = self.update_labels(self.centroids)
             self.centroids, centroid_diff = self.update_centroids(k, self.data_centroid_labels, self.centroids)
+            self.data_centroid_labels = self.update_labels(self.centroids)
             self.inertia = self.compute_inertia()
             i += 1
             
         return self.inertia
 
-    def cluster_batch(self, k=2, n_iter=1, verbose=False, p=2):
+    def cluster_batch(self, k=2, n_iter=1, verbose=False, p=2): # incomplete
         '''Run K-means multiple times, each time with different initial conditions.
         Keeps track of K-means instance that generates lowest inertia. Sets the following instance
         variables based on the best K-mean run:
@@ -197,8 +200,7 @@ class KMeans:
         n_iter: int. Number of times to run K-means with the designated `k` value.
         verbose: boolean. Print out debug information if set to True.
         '''
-        pass
-            
+        pass        
 
     def update_labels(self, centroids):
         '''Assigns each data sample to the nearest centroid
@@ -262,7 +264,7 @@ class KMeans:
             
         return current_centroids, centroid_diff
 
-    def compute_inertia(self):  # bugged
+    def compute_inertia(self):
         '''Mean squared distance between every data sample and its assigned (nearest) centroid
 
         Returns:
@@ -272,7 +274,9 @@ class KMeans:
         sums = 0
         for i in range(len(self.data)): # for each sample
             # calculate distance between point and assigned centroid
-            sums += self.dist_pt_to_pt(self.data[i,:],self.centroids[self.data_centroid_labels[i]])
+            pt = self.data[i,:]
+            assigned_centroid = self.data_centroid_labels[i]
+            sums += (self.dist_pt_to_pt(pt, self.centroids[assigned_centroid]))**2
             
         inertia = 1/len(self.data) * (sums)
         return inertia
@@ -317,7 +321,19 @@ class KMeans:
         - Run k-means with k=1,2,...,max_k, record the inertia.
         - Make the plot with appropriate x label, and y label, x tick marks.
         '''
-        pass
+        inertias = []
+        k_values = []
+        
+        for i in range(1,max_k+1):
+            inertias.append(self.cluster(i))
+            k_values.append(i)
+            
+        plt.plot(k_values, inertias)
+        plt.xticks(np.linspace(1,max_k,max_k))
+        plt.title("Elbow Plot")
+        plt.xlabel("k Clusters")
+        plt.ylabel("Inertia")
+        plt.show()
 
     def replace_color_with_centroid(self):
         '''Replace each RGB pixel in self.data (flattened image) with the closest centroid value.
