@@ -56,28 +56,19 @@ class EM():
         ndarray. shape=(num_samps,)
             Multivariate gaussian evaluated at the data samples `pts`
         '''
-        mvg = np.zeros((pts.shape[0],))
-        
-        for i in range((len(pts))): # for each point
-            piTerm = (2*np.pi)**(len(mean)/2)
-            sigmaTerm = np.sqrt( np.linalg.det(sigma) )
-            t1 = 1 / (piTerm * sigmaTerm)
+        cov_det = np.linalg.det(sigma)
+        cov_inv = np.linalg.inv(sigma)
+        # scalar term 
+        t1 = 1 / np.sqrt((2 * np.pi) ** pts.shape[1] * cov_det)
+        # exponent term
+        t2 = -0.5 * np.sum(np.dot(pts - mean, cov_inv) * (pts - mean), axis=1)
 
-            for i in range((len(pts))): # for each point
-                piTerm = (2*np.pi)**(len(mean)/2)
-                sigmaTerm = np.sqrt(np.linalg.det(sigma))
-                t1 = 1 / (piTerm * sigmaTerm)
-
-                # matrices = (pts[i, :] - mean) @ np.linalg.inv(sigma) @ np.transpose(pts[i, :] - mean)
-                matrices = np.sum((pts[i, :] - mean) @ np.linalg.inv(sigma) @ np.transpose(pts[i, :] - mean))
-                t2 = np.exp(-1/2 * matrices)
-                
-                # print("Shape of t1:", t1.shape)
-                # print("Shape of t2:", t2.shape)
-                # print("Shape of mvg:", mvg.shape)
-                
-                mvg[i] = t1 * t2
+        mvg = t1 * np.exp(t2)
         
+        # print(f"t1.shape: {t1.shape}")
+        # print(f"t2.shape: {t2.shape}")
+        # print(f"mvg.shape: {mvg.shape}")
+
         return mvg
 
     def initalize(self, k):
@@ -136,10 +127,14 @@ class EM():
         self.responsibilities: ndarray. shape=(k, num_samps)
             The probability that each data point belongs to each of the k clusters.
         '''
-        # print(self.centroids)
-        for i in range(self.data.shape[0]): # for each sample
-            probs = self.gaussian(self.data, self.centroids, self.cov_mats[i])
-            # print(f'probs: {probs.shape}\n{probs}')
+        for i in range(self.k): # for each cluster
+            # use gaussian for probabilities that points belong to current cluster
+            probs = self.gaussian(self.data, self.centroids[i], self.cov_mats[i])
+            # update w_i entry
+            self.responsibilities[i] = probs * self.pi[i] 
+            
+        # make sure all rows sum to 1
+        self.responsibilities /= np.sum(self.responsibilities, 0)
         
         return self.responsibilities
 
