@@ -127,6 +127,7 @@ class EM():
         self.responsibilities: ndarray. shape=(k, num_samps)
             The probability that each data point belongs to each of the k clusters.
         '''
+        # self.responsibilites = probabilities of points being part of each cluster, shape=(k,N)
         for i in range(self.k): # for each cluster
             # use gaussian for probabilities that points belong to current cluster
             probs = self.gaussian(self.data, self.centroids[i], self.cov_mats[i])
@@ -177,13 +178,15 @@ class EM():
             rc = np.sum(self.responsibilities[i])
             self.centroids[i] = (1/rc) * np.dot(self.responsibilities[i,:], self.data)
             
-        # self.cov_mats = how much ones variable varies in relation to another, k total with shape=(M,M)
-        centered_data = self.data - np.mean(self.data, axis=0) # center data at origin
+        # self.cov_mats = how much ones variable varies in relation to another, shape=(k,M,M)
         for i in range(self.k): # for each cluster
-            # total responsibility of cluster i
+            # center data by subtracting mean
+            centered_data = self.data - self.centroids[i]
             rc = np.sum(self.responsibilities[i])
-            weighted_data = self.responsibilities[i] * centered_data.T
-            self.cov_mats[i] = (1/rc) * np.dot(weighted_data, centered_data)
+            # multiply centerd data by responsibilities
+            weighted_centered_data = centered_data * self.responsibilities[i][:, None]
+            self.cov_mats[i] = (1/rc) * np.dot(weighted_centered_data.T, centered_data)
+
 
         return self.centroids, self.cov_mats, self.pi
 
