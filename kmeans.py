@@ -200,8 +200,35 @@ class KMeans:
         n_iter: int. Number of times to run K-means with the designated `k` value.
         verbose: boolean. Print out debug information if set to True.
         '''
-        pass        
-
+        best_inertia = 9999999
+        best_i = 0
+        best_centroids = []
+        best_labels = []
+        
+        for i in range(n_iter):
+            self.cluster(k)
+            if verbose:
+                print(f'==Iteration #{i}==')
+                print(f'self.inertia: {self.inertia}')
+                # print(f'self.k: {self.k}')
+                # print(f'self.centroids: {self.centroids}')
+                # print(f'best inerita: {best_inertia}')
+                
+            if self.inertia < best_inertia:
+                best_inertia = self.inertia
+                best_i = i
+                best_centroids = self.centroids
+                best_labels = self.get_data_centroid_labels()
+                
+        self.centroids = best_centroids
+        self.inertia = best_inertia
+        self.data_centroid_labels = best_labels
+        
+        if verbose:
+            print(f'Lowest inerita iteration: i = {best_i}\nInertia = {self.inertia}')
+            
+        return self.inertia
+    
     def update_labels(self, centroids):
         '''Assigns each data sample to the nearest centroid
 
@@ -218,10 +245,17 @@ class KMeans:
         labels[i] is 2. The entire labels array may look something like this: [0, 2, 1, 1, 0, ...]
         '''
         labels = []
-        for row in self.data:
+        for row in self.data:  
             dists = self.dist_pt_to_centroids(row, centroids)
             label = np.where(dists == dists.min())
-            labels.append(int(label[0]))
+            # print(f'row.shape: {row.shape}')
+            if len(label[0]) > 1:
+                # print(f'label: {label}')
+                # print(f'label[0]: {label[0]}')
+                labels.append(int(label[0][0]))
+            else:
+                labels.append(int(label[0]))
+                
         return np.array(labels).astype(int)
 
     def update_centroids(self, k, data_centroid_labels, prev_centroids):
@@ -248,7 +282,7 @@ class KMeans:
         In the case of each cluster without samples assigned to it, you should assign make its centroid a data sample
         randomly selected from the dataset.
         '''
-        current_centroids = np.zeros((k,2))
+        current_centroids = np.zeros((k,self.num_features))
         for i in range(k):
             # get all points assigned to centroid i
             pts = self.data[data_centroid_labels == i]
@@ -310,12 +344,13 @@ class KMeans:
         plt.ylabel("")
         plt.show()
 
-    def elbow_plot(self, max_k):
+    def elbow_plot(self, max_k, n_iter):
         '''Makes an elbow plot: cluster number (k) on x axis, inertia on y axis.
 
         Parameters:
         -----------
         max_k: int. Run k-means with k=1,2,...,max_k.
+        n_iter: int. number of times to run kmeans for mininizing inertia
 
         TODO:
         - Run k-means with k=1,2,...,max_k, record the inertia.
@@ -325,7 +360,7 @@ class KMeans:
         k_values = []
         
         for i in range(1,max_k+1):
-            inertias.append(self.cluster(i))
+            inertias.append(self.cluster_batch(i,n_iter))
             k_values.append(i)
             
         plt.plot(k_values, inertias)
@@ -347,4 +382,10 @@ class KMeans:
         -----------
         None
         '''
-        pass
+        for i in range(self.k): # for each centroid
+            # get all pts assiged to current centroid & replace them all with centroid value
+            self.data[self.data_centroid_labels == i] = self.centroids[i]
+        # print(self.centroids)
+        # print(np.unique(self.data))
+
+        
