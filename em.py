@@ -134,7 +134,7 @@ class EM():
             self.responsibilities[i] = probs * self.pi[i] 
             
         # make sure all rows sum to 1
-        self.responsibilities /= np.sum(self.responsibilities, 0)
+        self.responsibilities /= np.sum(self.responsibilities, axis=0)
         
         return self.responsibilities
 
@@ -168,7 +168,22 @@ class EM():
         self.pi: ndarray. shape=(k,)
             Proportion of data points belonging to each cluster.
         '''
-        pass
+        # self.pi = proportion of samples that belong to each cluster, shape=(k,)
+        self.pi = (1/self.num_samps) * np.sum(self.responsibilities, axis=1)
+        
+        # self.centroids = centroids/means, k total with shape=(M,)
+        for i in range(self.k): # for each cluster
+            # total responsibility of cluster i
+            rc = np.sum(self.responsibilities[i])
+            self.centroids[i] = (1/rc) * np.dot(self.responsibilities[i,:], self.data)
+            
+        # self.cov_mats = how much ones variable varies in relation to another, k total with shape=(M,M)
+        centered_data = self.data - np.mean(self.data, axis=0) # center data at origin
+        for i in range(self.k): # for each cluster
+            # total responsibility of cluster i
+            rc = np.sum(self.responsibilities[i])
+            weighted_data = self.responsibilities[i] * centered_data.T
+            self.cov_mats[i] = (1/rc) * np.dot(weighted_data, centered_data)
 
         return self.centroids, self.cov_mats, self.pi
 
